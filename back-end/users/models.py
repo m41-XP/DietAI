@@ -19,8 +19,14 @@ class CustomUserManager(BaseUserManager):
 class CustomUser(AbstractUser):
     username = None  # Remove username field
     email = models.EmailField(unique=True)
+    google_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
+    auth_provider = models.CharField(
+        max_length=20,
+        choices=[('email', 'Email'), ('google', 'Google')],
+        default='email',
+    )
 
-    objects = CustomUserManager() # <--- Tell Django to use the new manager
+    objects = CustomUserManager()
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []

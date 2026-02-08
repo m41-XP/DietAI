@@ -1,5 +1,6 @@
-import React, { createContext, useState, useEffect } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
+import { getToken, setToken, deleteToken } from '../services/tokenStorage';
+import api from '../services/api';
 
 export const AuthContext = createContext();
 
@@ -7,25 +8,43 @@ export const AuthProvider = ({ children }) => {
   const [userToken, setUserToken] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for token on startup
+  // Load tokens on app startup
   useEffect(() => {
-    const loadToken = async () => {
-      const token = await SecureStore.getItemAsync('userToken');
-      setUserToken(token);
-      setIsLoading(false);
+    const loadTokens = async () => {
+      try {
+        const access = await getToken('accessToken');
+        if (access) {
+          setUserToken(access);
+        }
+      } catch (e) {
+        console.error('Failed to load tokens:', e);
+      } finally {
+        setIsLoading(false);
+      }
     };
-    loadToken();
+    loadTokens();
   }, []);
 
-  const login = async (token) => {
-    setUserToken(token);
-    await SecureStore.setItemAsync('userToken', token);
-  };
+  const login = useCallback(async (accessToken, refreshToken) => {
+    await setToken('accessToken', accessToken);
+    await setToken('refreshToken', refreshToken);
+    setUserToken(accessToken);
+  }, []);
 
-  const logout = async () => {
-    setUserToken(null);
-    await SecureStore.deleteItemAsync('userToken');
-  };
+  const logout = useCallback(async () => {
+    try {
+      const refreshToken = await getToken('refreshToken');
+      if (refreshToken) {
+        await api.post('/api/logout/', { refresh: refreshToken });
+      }
+    } catch (e) {
+      console.warn('Server logout failed:', e.message);
+    } finally {
+      await deleteToken('accessToken');
+      await deleteToken('refreshToken');
+      setUserToken(null);
+    }
+  }, []);
 
   return (
     <AuthContext.Provider value={{ login, logout, userToken, isLoading }}>

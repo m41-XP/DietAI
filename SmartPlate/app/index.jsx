@@ -13,12 +13,15 @@ export default function WelcomeScreen() {
         <Text style={styles.btnText}>Log In</Text>
       </Pressable>
 
-      <Pressable style={styles.guestBtn} onPress={() => router.push('/scanner')}>
-        <Text style={[styles.btnText, { color: '#4CAF50' }]}>Continue as Guest</Text>
-      </Pressable>
-
       <Pressable onPress={() => router.push('/register')}>
         <Text style={{ marginTop: 20, color: '#666' }}>New here? Create an account</Text>
+      </Pressable>
+
+      <Pressable
+        style={{ marginTop: 30, paddingVertical: 10, paddingHorizontal: 30 }}
+        onPress={() => router.push('/scanner')}
+      >
+        <Text style={{ color: '#555', fontSize: 16, textDecorationLine: 'underline' }}>Skip for now</Text>
       </Pressable>
     </View>
   );
@@ -29,6 +32,5 @@ const styles = StyleSheet.create({
   logo: { fontSize: 42, fontWeight: 'bold', color: '#4CAF50' },
   subtitle: { fontSize: 16, color: '#666', marginBottom: 50 },
   loginBtn: { backgroundColor: '#4CAF50', paddingVertical: 15, paddingHorizontal: 80, borderRadius: 30, marginBottom: 20 },
-  guestBtn: { borderWidth: 2, borderColor: '#4CAF50', paddingVertical: 15, paddingHorizontal: 50, borderRadius: 30 },
   btnText: { color: '#fff', fontSize: 18, fontWeight: '600' }
 });
