@@ -1,4 +1,4 @@
-import React, { useState, useRef, useContext, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,18 +8,16 @@ import {
   ActivityIndicator,
   ScrollView,
   Platform,
-  Alert,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
-import { AuthContext } from '../src/context/AuthContext';
-import { scanFood } from '../src/services/api';
+import { scanFood } from '../../src/services/api';
+import { colors, typography, spacing, radii } from '../../src/theme';
 
 const STATES = { IDLE: 'IDLE', PREVIEW: 'PREVIEW', LOADING: 'LOADING', RESULTS: 'RESULTS', ERROR: 'ERROR' };
 
 export default function ScannerScreen() {
-  const { userToken, logout } = useContext(AuthContext);
   const [screenState, setScreenState] = useState(STATES.IDLE);
   const [imageUri, setImageUri] = useState(null);
   const [imageBase64, setImageBase64] = useState(null);
@@ -28,11 +26,9 @@ export default function ScannerScreen() {
   const [errorMsg, setErrorMsg] = useState('');
   const cameraRef = useRef(null);
 
-  // Camera permissions (mobile only)
   const [permission, requestPermission] = useCameraPermissions();
   const isWeb = Platform.OS === 'web';
 
-  // Reset to idle
   const resetScanner = () => {
     setScreenState(STATES.IDLE);
     setImageUri(null);
@@ -41,7 +37,6 @@ export default function ScannerScreen() {
     setErrorMsg('');
   };
 
-  // Take photo with camera (mobile)
   const takePhoto = async () => {
     if (!cameraRef.current) return;
     try {
@@ -56,7 +51,32 @@ export default function ScannerScreen() {
     }
   };
 
-  // Pick image from gallery
+  const launchCamera = async () => {
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        quality: 0.7,
+        base64: true,
+      });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      setImageUri(asset.uri);
+      if (asset.base64) {
+        setImageBase64(asset.base64);
+      } else if (!isWeb && asset.uri) {
+        const b64 = await FileSystem.readAsStringAsync(asset.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        setImageBase64(b64);
+      }
+      const ext = asset.uri.split('.').pop()?.toLowerCase();
+      setMimeType(ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg');
+      setScreenState(STATES.PREVIEW);
+    } catch (e) {
+      setErrorMsg('Failed to open camera.');
+      setScreenState(STATES.ERROR);
+    }
+  };
+
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -67,11 +87,9 @@ export default function ScannerScreen() {
       if (result.canceled) return;
       const asset = result.assets[0];
       setImageUri(asset.uri);
-      // expo-image-picker returns base64 when requested
       if (asset.base64) {
         setImageBase64(asset.base64);
       } else if (!isWeb && asset.uri) {
-        // Fallback: read file as base64 on native
         const b64 = await FileSystem.readAsStringAsync(asset.uri, {
           encoding: FileSystem.EncodingType.Base64,
         });
@@ -86,7 +104,6 @@ export default function ScannerScreen() {
     }
   };
 
-  // Send to backend for analysis
   const analyzeFood = async () => {
     if (!imageBase64) {
       setErrorMsg('No image data available.');
@@ -107,29 +124,23 @@ export default function ScannerScreen() {
 
   // ─── IDLE STATE ──────────────────────────────────────
   if (screenState === STATES.IDLE) {
-    // Web: no camera, just gallery
     if (isWeb) {
       return (
         <View style={styles.container}>
           <Text style={styles.title}>SmartPlate Scanner</Text>
-          <Text style={styles.subtitle}>Upload a food photo to get nutritional info</Text>
-          <Pressable style={styles.primaryBtn} onPress={pickImage}>
-            <Text style={styles.primaryBtnText}>Choose Photo</Text>
+          <Text style={styles.subtitle}>Take a photo of your meal to get nutritional info</Text>
+          <Pressable style={styles.primaryBtn} onPress={launchCamera}>
+            <Text style={styles.primaryBtnText}>Take Photo</Text>
           </Pressable>
-          {userToken ? (
-            <Pressable style={styles.logoutBtn} onPress={logout}>
-              <Text style={styles.logoutText}>Log Out</Text>
-            </Pressable>
-          ) : (
-            <Text style={styles.guestLabel}>Browsing as Guest</Text>
-          )}
+          <Pressable style={styles.secondaryBtn} onPress={pickImage}>
+            <Text style={styles.secondaryBtnText}>Choose from Gallery</Text>
+          </Pressable>
         </View>
       );
     }
 
-    // Mobile: camera viewfinder
     if (!permission) {
-      return <View style={styles.container}><ActivityIndicator size="large" color="#4CAF50" /></View>;
+      return <View style={styles.container}><ActivityIndicator size="large" color={colors.primary} /></View>;
     }
     if (!permission.granted) {
       return (
@@ -160,11 +171,6 @@ export default function ScannerScreen() {
             </View>
           </View>
         </CameraView>
-        {userToken ? (
-          <Pressable style={styles.cameraLogoutBtn} onPress={logout}>
-            <Text style={styles.logoutText}>Log Out</Text>
-          </Pressable>
-        ) : null}
       </View>
     );
   }
@@ -191,7 +197,7 @@ export default function ScannerScreen() {
   if (screenState === STATES.LOADING) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={[styles.subtitle, { marginTop: 20 }]}>Analyzing your food...</Text>
       </View>
     );
@@ -202,10 +208,8 @@ export default function ScannerScreen() {
     return (
       <ScrollView contentContainerStyle={styles.resultsContainer}>
         {imageUri && <Image source={{ uri: imageUri }} style={styles.resultImage} />}
-
         <View style={styles.card}>
           <Text style={styles.dishName}>{results.dish_name}</Text>
-
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{Math.round(results.calories)}</Text>
@@ -220,7 +224,6 @@ export default function ScannerScreen() {
               <Text style={styles.statLabel}>confidence</Text>
             </View>
           </View>
-
           {results.ingredients && results.ingredients.length > 0 && (
             <View style={styles.ingredientsSection}>
               <Text style={styles.ingredientsTitle}>Ingredients</Text>
@@ -233,7 +236,6 @@ export default function ScannerScreen() {
             </View>
           )}
         </View>
-
         <Pressable style={styles.primaryBtn} onPress={resetScanner}>
           <Text style={styles.primaryBtnText}>Scan Another</Text>
         </Pressable>
@@ -244,7 +246,9 @@ export default function ScannerScreen() {
   // ─── ERROR STATE ─────────────────────────────────────
   return (
     <View style={styles.container}>
-      <Text style={styles.errorIcon}>!</Text>
+      <View style={styles.errorIconBox}>
+        <Text style={styles.errorIcon}>!</Text>
+      </View>
       <Text style={styles.errorText}>{errorMsg}</Text>
       <Pressable style={styles.primaryBtn} onPress={resetScanner}>
         <Text style={styles.primaryBtnText}>Try Again</Text>
@@ -254,76 +258,70 @@ export default function ScannerScreen() {
 }
 
 const styles = StyleSheet.create({
-  // Layout
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 30,
-    backgroundColor: '#fff',
+    padding: spacing.xl,
+    backgroundColor: colors.background,
   },
   resultsContainer: {
     alignItems: 'center',
-    padding: 20,
+    padding: spacing.lg,
     paddingBottom: 40,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
-
-  // Typography
-  title: { fontSize: 26, fontWeight: 'bold', marginBottom: 10, color: '#222' },
-  subtitle: { fontSize: 16, color: '#666', marginBottom: 30, textAlign: 'center' },
-
-  // Buttons
+  title: {
+    ...typography.h1,
+    marginBottom: spacing.sm,
+  },
+  subtitle: {
+    ...typography.body,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
   primaryBtn: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 14,
+    backgroundColor: colors.primary,
+    paddingVertical: 16,
     paddingHorizontal: 36,
-    borderRadius: 12,
-    marginTop: 16,
+    borderRadius: radii.pill,
+    marginTop: spacing.md,
   },
-  primaryBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  primaryBtnText: {
+    ...typography.button,
+  },
   secondaryBtn: {
     borderWidth: 2,
-    borderColor: '#999',
+    borderColor: colors.border,
     paddingVertical: 14,
     paddingHorizontal: 36,
-    borderRadius: 12,
-    marginTop: 16,
+    borderRadius: radii.pill,
+    marginTop: spacing.md,
   },
-  secondaryBtnText: { color: '#666', fontWeight: '600', fontSize: 16 },
-  row: { flexDirection: 'row', gap: 16, marginTop: 10 },
-
-  // Auth
-  logoutBtn: {
-    borderWidth: 2,
-    borderColor: '#ff4444',
-    paddingVertical: 10,
-    paddingHorizontal: 30,
-    borderRadius: 10,
-    marginTop: 40,
+  secondaryBtnText: {
+    color: colors.textSecondary,
+    fontWeight: '600',
+    fontSize: 16,
   },
-  logoutText: { color: '#ff4444', fontWeight: '600', fontSize: 14 },
-  guestLabel: { color: '#999', fontSize: 14, marginTop: 40 },
+  row: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
 
   // Camera
-  cameraContainer: { flex: 1, backgroundColor: '#000' },
+  cameraContainer: { flex: 1, backgroundColor: colors.black },
   camera: { flex: 1 },
-  cameraOverlay: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  cameraTopBar: {
-    paddingTop: 60,
-    alignItems: 'center',
-  },
+  cameraOverlay: { flex: 1, justifyContent: 'space-between' },
+  cameraTopBar: { paddingTop: 60, alignItems: 'center' },
   cameraTitle: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 18,
     fontWeight: '600',
     backgroundColor: 'rgba(0,0,0,0.4)',
     paddingHorizontal: 20,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: radii.pill,
     overflow: 'hidden',
   },
   cameraBottomBar: {
@@ -338,7 +336,7 @@ const styles = StyleSheet.create({
     height: 76,
     borderRadius: 38,
     borderWidth: 4,
-    borderColor: '#fff',
+    borderColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -346,79 +344,108 @@ const styles = StyleSheet.create({
     width: 62,
     height: 62,
     borderRadius: 31,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
   },
   galleryBtn: {
     backgroundColor: 'rgba(255,255,255,0.25)',
     paddingHorizontal: 18,
     paddingVertical: 10,
-    borderRadius: 20,
+    borderRadius: radii.pill,
   },
-  galleryBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
-  cameraLogoutBtn: {
-    position: 'absolute',
-    top: 55,
-    right: 20,
-    borderWidth: 1,
-    borderColor: '#ff4444',
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+  galleryBtnText: {
+    color: colors.white,
+    fontWeight: '600',
+    fontSize: 14,
   },
 
   // Preview
   previewImage: {
     width: 300,
     height: 300,
-    borderRadius: 16,
-    marginBottom: 10,
+    borderRadius: radii.lg,
+    marginBottom: spacing.sm,
   },
 
   // Results
   resultImage: {
     width: '100%',
     height: 220,
-    borderRadius: 16,
-    marginBottom: 16,
+    borderRadius: radii.lg,
+    marginBottom: spacing.md,
   },
   card: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: colors.card,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
     width: '100%',
-    marginBottom: 10,
+    marginBottom: spacing.sm,
   },
-  dishName: { fontSize: 24, fontWeight: 'bold', color: '#222', marginBottom: 16, textAlign: 'center' },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20 },
+  dishName: {
+    ...typography.h1,
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: spacing.lg,
+  },
   statBox: { alignItems: 'center' },
-  statValue: { fontSize: 28, fontWeight: 'bold', color: '#4CAF50' },
-  statLabel: { fontSize: 13, color: '#888', marginTop: 2 },
-  ingredientsSection: { borderTopWidth: 1, borderTopColor: '#e0e0e0', paddingTop: 16 },
-  ingredientsTitle: { fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 12 },
+  statValue: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: colors.primary,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  ingredientsSection: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.md,
+  },
+  ingredientsTitle: {
+    ...typography.h2,
+    marginBottom: spacing.md,
+  },
   ingredientRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.border,
   },
-  ingredientName: { fontSize: 15, color: '#444' },
-  ingredientCal: { fontSize: 15, color: '#4CAF50', fontWeight: '600' },
+  ingredientName: {
+    fontSize: 15,
+    color: colors.textPrimary,
+  },
+  ingredientCal: {
+    fontSize: 15,
+    color: colors.primary,
+    fontWeight: '600',
+  },
 
   // Error
-  errorIcon: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#ff4444',
-    backgroundColor: '#ffe0e0',
+  errorIconBox: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    textAlign: 'center',
-    lineHeight: 72,
-    marginBottom: 20,
-    overflow: 'hidden',
+    backgroundColor: '#FFE0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
   },
-  errorText: { fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 10, paddingHorizontal: 20 },
+  errorIcon: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: colors.error,
+  },
+  errorText: {
+    ...typography.body,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
 });

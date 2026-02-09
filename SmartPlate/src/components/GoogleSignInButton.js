@@ -4,6 +4,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
+import { colors, radii } from '../theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -42,7 +43,7 @@ export default function GoogleSignInButton() {
       disabled={!request || loading}
     >
       {loading ? (
-        <ActivityIndicator color="#333" />
+        <ActivityIndicator color={colors.textPrimary} />
       ) : (
         <Text style={styles.googleButtonText}>Continue with Google</Text>
       )}
@@ -53,15 +54,15 @@ export default function GoogleSignInButton() {
 const styles = StyleSheet.create({
   googleButton: {
     borderWidth: 1.5,
-    borderColor: '#ddd',
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    paddingVertical: 16,
+    borderRadius: radii.pill,
     alignItems: 'center',
   },
   disabled: { opacity: 0.6 },
   googleButtonText: {
-    color: '#333',
+    color: colors.textPrimary,
     fontWeight: '600',
     fontSize: 16,
   },

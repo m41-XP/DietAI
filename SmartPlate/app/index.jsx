@@ -1,36 +1,109 @@
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAuthSheet } from '../src/context/AuthSheetContext';
+import { colors, radii, spacing, typography } from '../src/theme';
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const { openLogin, openRegister } = useAuthSheet();
 
   return (
     <View style={styles.container}>
-      <Text style={styles.logo}>SmartPlate</Text>
-      <Text style={styles.subtitle}>Smart eating, simplified.</Text>
+      {/* Logo placeholder */}
+      <View style={styles.logoBox}>
+        <Text style={styles.logoIcon}>🍽</Text>
+      </View>
 
-      <Pressable style={styles.loginBtn} onPress={() => router.push('/login')}>
-        <Text style={styles.btnText}>Log In</Text>
-      </Pressable>
+      <Text style={styles.title}>Scan, plan, and eat{'\n'}smarter every day</Text>
+      <Text style={styles.subtitle}>
+        Snap a photo of your food, get instant nutrition info, and build personalized meal plans.
+      </Text>
 
-      <Pressable onPress={() => router.push('/register')}>
-        <Text style={{ marginTop: 20, color: '#666' }}>New here? Create an account</Text>
-      </Pressable>
+      {/* Sign Up + Sign In buttons */}
+      <View style={styles.authRow}>
+        <Pressable style={styles.signUpBtn} onPress={openRegister}>
+          <Text style={styles.signUpBtnText}>Sign Up</Text>
+        </Pressable>
+        <Pressable style={styles.signInBtn} onPress={openLogin}>
+          <Text style={styles.signInBtnText}>Sign In</Text>
+        </Pressable>
+      </View>
 
+      {/* Explore link */}
       <Pressable
-        style={{ marginTop: 30, paddingVertical: 10, paddingHorizontal: 30 }}
-        onPress={() => router.push('/scanner')}
+        style={styles.exploreLink}
+        onPress={() => router.push('/(tabs)')}
       >
-        <Text style={{ color: '#555', fontSize: 16, textDecorationLine: 'underline' }}>Skip for now</Text>
+        <Text style={styles.exploreLinkText}>Explore first</Text>
       </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
-  logo: { fontSize: 42, fontWeight: 'bold', color: '#4CAF50' },
-  subtitle: { fontSize: 16, color: '#666', marginBottom: 50 },
-  loginBtn: { backgroundColor: '#4CAF50', paddingVertical: 15, paddingHorizontal: 80, borderRadius: 30, marginBottom: 20 },
-  btnText: { color: '#fff', fontSize: 18, fontWeight: '600' }
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.xl,
+  },
+
+  // Logo
+  logoBox: {
+    width: 72,
+    height: 72,
+    borderRadius: radii.lg,
+    backgroundColor: '#E8F5E9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  logoIcon: { fontSize: 36 },
+
+  // Typography
+  title: {
+    ...typography.hero,
+    textAlign: 'center',
+    lineHeight: 40,
+    marginBottom: spacing.md,
+  },
+  subtitle: {
+    ...typography.body,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: spacing.xxl,
+    paddingHorizontal: spacing.md,
+  },
+
+  // Auth buttons row
+  authRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    width: '100%',
+    marginBottom: spacing.lg,
+  },
+  signUpBtn: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    paddingVertical: 16,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+  },
+  signUpBtnText: { ...typography.button },
+  signInBtn: {
+    flex: 1,
+    backgroundColor: colors.background,
+    paddingVertical: 16,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.border,
+  },
+  signInBtnText: { ...typography.button, color: colors.textPrimary },
+
+  // Explore link
+  exploreLink: { paddingVertical: spacing.md, paddingHorizontal: spacing.xl },
+  exploreLinkText: { ...typography.caption, textDecorationLine: 'underline' },
 });
