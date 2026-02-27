@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthSheet } from '../src/context/AuthSheetContext';
 import { colors, radii, spacing, typography } from '../src/theme';
 
@@ -10,17 +11,26 @@ export default function WelcomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Logo placeholder */}
+      <StatusBar barStyle="dark-content" />
+
+      {/* Logo */}
       <View style={styles.logoBox}>
-        <Text style={styles.logoIcon}>🍽</Text>
+        <Ionicons name="restaurant" size={40} color={colors.primary} />
       </View>
 
-      <Text style={styles.title}>Scan, plan, and eat{'\n'}smarter every day</Text>
+      {/* Wordmark */}
+      <Text style={styles.appName}>SmartPlate</Text>
+
+      {/* Hero text */}
+      <Text style={styles.title}>
+        Eat smarter,{'\n'}
+        <Text style={{ color: colors.primary }}>live better</Text>
+      </Text>
       <Text style={styles.subtitle}>
-        Snap a photo of your food, get instant nutrition info, and build personalized meal plans.
+        Scan food, get instant nutrition info,{'\n'}and build your personal meal plan.
       </Text>
 
-      {/* Sign Up + Sign In buttons */}
+      {/* Auth buttons */}
       <View style={styles.authRow}>
         <Pressable style={styles.signUpBtn} onPress={openRegister}>
           <Text style={styles.signUpBtnText}>Sign Up</Text>
@@ -35,7 +45,8 @@ export default function WelcomeScreen() {
         style={styles.exploreLink}
         onPress={() => router.push('/(tabs)')}
       >
-        <Text style={styles.exploreLinkText}>Explore first</Text>
+        <Text style={styles.exploreLinkText}>Explore without account</Text>
+        <Ionicons name="arrow-forward" size={14} color={colors.textMuted} />
       </Pressable>
     </View>
   );
@@ -50,34 +61,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
 
-  // Logo
   logoBox: {
-    width: 72,
-    height: 72,
-    borderRadius: radii.lg,
-    backgroundColor: '#E8F5E9',
+    width: 88,
+    height: 88,
+    borderRadius: radii.xl,
+    backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  logoIcon: { fontSize: 36 },
-
-  // Typography
-  title: {
-    ...typography.hero,
-    textAlign: 'center',
-    lineHeight: 40,
     marginBottom: spacing.md,
   },
+
+  appName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.primary,
+    letterSpacing: 1,
+    marginBottom: spacing.lg,
+  },
+
+  title: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    textAlign: 'center',
+    lineHeight: 44,
+    marginBottom: spacing.md,
+  },
+
   subtitle: {
     ...typography.body,
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: spacing.xxl,
-    paddingHorizontal: spacing.md,
+    lineHeight: 23,
+    marginBottom: spacing.xl,
   },
 
-  // Auth buttons row
   authRow: {
     flexDirection: 'row',
     gap: spacing.md,
@@ -103,7 +120,11 @@ const styles = StyleSheet.create({
   },
   signInBtnText: { ...typography.button, color: colors.textPrimary },
 
-  // Explore link
-  exploreLink: { paddingVertical: spacing.md, paddingHorizontal: spacing.xl },
+  exploreLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: spacing.sm,
+  },
   exploreLinkText: { ...typography.caption, textDecorationLine: 'underline' },
 });

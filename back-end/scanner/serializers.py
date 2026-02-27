@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from .models import ScanResult, GeneratedDish
 
 
 class ScanRequestSerializer(serializers.Serializer):
@@ -20,3 +21,23 @@ class ScanResponseSerializer(serializers.Serializer):
     kilojoules = serializers.FloatField()
     confidence = serializers.CharField()
     ingredients = IngredientSerializer(many=True)
+
+
+class ScanHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ScanResult
+        fields = ['id', 'dish_name', 'calories', 'kilojoules', 'confidence', 'ingredients', 'scanned_image', 'scanned_at']
+
+
+class ScanFingerprintSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for duplicate detection — no heavy image data."""
+    class Meta:
+        model = ScanResult
+        fields = ['id', 'dish_name', 'image_fingerprint']
+
+
+class GeneratedDishSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GeneratedDish
+        fields = ['id', 'dish_name', 'description', 'calories', 'kilojoules',
+                  'ingredients', 'generated_image', 'mime_type', 'generated_at']

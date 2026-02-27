@@ -1,77 +1,62 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   Pressable,
   StyleSheet,
   Image,
-  ActivityIndicator,
-  ScrollView,
-  Platform,
+  StatusBar,
 } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
-import { scanFood } from '../../src/services/api';
+import { Ionicons } from '@expo/vector-icons';
+import { setPendingScan } from '../../src/stores/resultStore';
 import { colors, typography, spacing, radii } from '../../src/theme';
 
-const STATES = { IDLE: 'IDLE', PREVIEW: 'PREVIEW', LOADING: 'LOADING', RESULTS: 'RESULTS', ERROR: 'ERROR' };
+const STATES = {
+  IDLE: 'IDLE',
+  PREVIEW: 'PREVIEW',
+  ERROR: 'ERROR',
+};
 
 export default function ScannerScreen() {
+  const router = useRouter();
   const [screenState, setScreenState] = useState(STATES.IDLE);
-  const [imageUri, setImageUri] = useState(null);
-  const [imageBase64, setImageBase64] = useState(null);
-  const [mimeType, setMimeType] = useState('image/jpeg');
-  const [results, setResults] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
-  const cameraRef = useRef(null);
-
-  const [permission, requestPermission] = useCameraPermissions();
-  const isWeb = Platform.OS === 'web';
+  const [pendingData, setPending] = useState<{ b64: string; mime: string; uri: string } | null>(null);
 
   const resetScanner = () => {
     setScreenState(STATES.IDLE);
-    setImageUri(null);
-    setImageBase64(null);
-    setResults(null);
     setErrorMsg('');
+    setPending(null);
+  };
+
+  const goToPreview = (b64: string, mime: string, uri: string) => {
+    setPending({ b64, mime, uri });
+    setScreenState(STATES.PREVIEW);
+  };
+
+  const handleAnalyze = () => {
+    if (!pendingData) return;
+    setPendingScan({ imageBase64: pendingData.b64, mimeType: pendingData.mime, imageUri: pendingData.uri });
+    router.push('/scan-result');
+    resetScanner();
   };
 
   const takePhoto = async () => {
-    if (!cameraRef.current) return;
     try {
-      const photo = await cameraRef.current.takePictureAsync({ base64: true, quality: 0.7 });
-      setImageUri(photo.uri);
-      setImageBase64(photo.base64);
-      setMimeType('image/jpeg');
-      setScreenState(STATES.PREVIEW);
-    } catch (e) {
-      setErrorMsg('Failed to take photo.');
-      setScreenState(STATES.ERROR);
-    }
-  };
-
-  const launchCamera = async () => {
-    try {
-      const result = await ImagePicker.launchCameraAsync({
-        quality: 0.7,
-        base64: true,
-      });
+      const result = await ImagePicker.launchCameraAsync({ quality: 0.7, base64: true });
       if (result.canceled) return;
       const asset = result.assets[0];
-      setImageUri(asset.uri);
-      if (asset.base64) {
-        setImageBase64(asset.base64);
-      } else if (!isWeb && asset.uri) {
-        const b64 = await FileSystem.readAsStringAsync(asset.uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        setImageBase64(b64);
+      let b64 = asset.base64;
+      if (!b64 && asset.uri) {
+        b64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
       }
       const ext = asset.uri.split('.').pop()?.toLowerCase();
-      setMimeType(ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg');
-      setScreenState(STATES.PREVIEW);
-    } catch (e) {
+      const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+      goToPreview(b64!, mime, asset.uri);
+    } catch {
       setErrorMsg('Failed to open camera.');
       setScreenState(STATES.ERROR);
     }
@@ -79,178 +64,94 @@ export default function ScannerScreen() {
 
   const pickImage = async () => {
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        quality: 0.7,
-        base64: true,
-      });
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7, base64: true });
       if (result.canceled) return;
       const asset = result.assets[0];
-      setImageUri(asset.uri);
-      if (asset.base64) {
-        setImageBase64(asset.base64);
-      } else if (!isWeb && asset.uri) {
-        const b64 = await FileSystem.readAsStringAsync(asset.uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        setImageBase64(b64);
+      let b64 = asset.base64;
+      if (!b64 && asset.uri) {
+        b64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
       }
       const ext = asset.uri.split('.').pop()?.toLowerCase();
-      setMimeType(ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg');
-      setScreenState(STATES.PREVIEW);
-    } catch (e) {
+      const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+      goToPreview(b64!, mime, asset.uri);
+    } catch {
       setErrorMsg('Failed to pick image.');
       setScreenState(STATES.ERROR);
     }
   };
 
-  const analyzeFood = async () => {
-    if (!imageBase64) {
-      setErrorMsg('No image data available.');
-      setScreenState(STATES.ERROR);
-      return;
-    }
-    setScreenState(STATES.LOADING);
-    try {
-      const response = await scanFood(imageBase64, mimeType);
-      setResults(response.data);
-      setScreenState(STATES.RESULTS);
-    } catch (e) {
-      const detail = e.response?.data?.detail || 'Analysis failed. Please try again.';
-      setErrorMsg(detail);
-      setScreenState(STATES.ERROR);
-    }
-  };
-
-  // ─── IDLE STATE ──────────────────────────────────────
+  // ── IDLE ──────────────────────────────────────────────────────────────────
   if (screenState === STATES.IDLE) {
-    if (isWeb) {
-      return (
-        <View style={styles.container}>
-          <Text style={styles.title}>SmartPlate Scanner</Text>
-          <Text style={styles.subtitle}>Take a photo of your meal to get nutritional info</Text>
-          <Pressable style={styles.primaryBtn} onPress={launchCamera}>
+    return (
+      <View style={styles.screen}>
+        <StatusBar barStyle="dark-content" />
+
+        {/* Scanner graphic */}
+        <View style={styles.scannerCard}>
+          <View style={[styles.corner, styles.cornerTL]} />
+          <View style={[styles.corner, styles.cornerTR]} />
+          <View style={[styles.corner, styles.cornerBL]} />
+          <View style={[styles.corner, styles.cornerBR]} />
+          <View style={styles.cameraIconCircle}>
+            <Ionicons name="camera-outline" size={36} color={colors.white} />
+          </View>
+          <Text style={styles.scannerHint}>Select an image to analyze</Text>
+        </View>
+
+        {/* Title */}
+        <View style={styles.titleSection}>
+          <Text style={styles.screenTitle}>Food Scanner</Text>
+          <Text style={styles.screenSubtitle}>
+            Snap your meal for instant nutrition info
+          </Text>
+        </View>
+
+        {/* Buttons */}
+        <View style={styles.btnStack}>
+          <Pressable style={styles.primaryBtn} onPress={takePhoto}>
+            <Ionicons name="camera-outline" size={20} color={colors.white} />
             <Text style={styles.primaryBtnText}>Take Photo</Text>
           </Pressable>
-          <Pressable style={styles.secondaryBtn} onPress={pickImage}>
-            <Text style={styles.secondaryBtnText}>Choose from Gallery</Text>
-          </Pressable>
-        </View>
-      );
-    }
-
-    if (!permission) {
-      return <View style={styles.container}><ActivityIndicator size="large" color={colors.primary} /></View>;
-    }
-    if (!permission.granted) {
-      return (
-        <View style={styles.container}>
-          <Text style={styles.subtitle}>Camera access is needed to scan food</Text>
-          <Pressable style={styles.primaryBtn} onPress={requestPermission}>
-            <Text style={styles.primaryBtnText}>Grant Camera Access</Text>
-          </Pressable>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.cameraContainer}>
-        <CameraView ref={cameraRef} style={styles.camera} facing="back">
-          <View style={styles.cameraOverlay}>
-            <View style={styles.cameraTopBar}>
-              <Text style={styles.cameraTitle}>Point at your food</Text>
-            </View>
-            <View style={styles.cameraBottomBar}>
-              <Pressable style={styles.galleryBtn} onPress={pickImage}>
-                <Text style={styles.galleryBtnText}>Gallery</Text>
-              </Pressable>
-              <Pressable style={styles.captureBtn} onPress={takePhoto}>
-                <View style={styles.captureBtnInner} />
-              </Pressable>
-              <View style={{ width: 70 }} />
-            </View>
-          </View>
-        </CameraView>
-      </View>
-    );
-  }
-
-  // ─── PREVIEW STATE ───────────────────────────────────
-  if (screenState === STATES.PREVIEW) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Preview</Text>
-        {imageUri && <Image source={{ uri: imageUri }} style={styles.previewImage} />}
-        <View style={styles.row}>
-          <Pressable style={styles.secondaryBtn} onPress={resetScanner}>
-            <Text style={styles.secondaryBtnText}>Retake</Text>
-          </Pressable>
-          <Pressable style={styles.primaryBtn} onPress={analyzeFood}>
-            <Text style={styles.primaryBtnText}>Analyze Food</Text>
+          <Pressable style={styles.outlineBtn} onPress={pickImage}>
+            <Ionicons name="images-outline" size={20} color={colors.textPrimary} />
+            <Text style={styles.outlineBtnText}>Choose from Gallery</Text>
           </Pressable>
         </View>
       </View>
     );
   }
 
-  // ─── LOADING STATE ───────────────────────────────────
-  if (screenState === STATES.LOADING) {
+  // ── PREVIEW ───────────────────────────────────────────────────────────────
+  if (screenState === STATES.PREVIEW && pendingData) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.subtitle, { marginTop: 20 }]}>Analyzing your food...</Text>
+      <View style={styles.centeredScreen}>
+        <Text style={styles.screenTitle}>Preview</Text>
+        <Text style={styles.screenSubtitle}>Looks good? Tap Analyze to get nutrition info.</Text>
+        <Image source={{ uri: pendingData.uri }} style={styles.previewImage} resizeMode="cover" />
+        <View style={styles.btnRow}>
+          <Pressable style={styles.outlineBtnFlex} onPress={resetScanner}>
+            <Ionicons name="refresh-outline" size={18} color={colors.textPrimary} />
+            <Text style={styles.outlineBtnText}>Retake</Text>
+          </Pressable>
+          <Pressable style={[styles.primaryBtn, { flex: 1 }]} onPress={handleAnalyze}>
+            <Ionicons name="sparkles-outline" size={18} color={colors.white} />
+            <Text style={styles.primaryBtnText}>Analyze</Text>
+          </Pressable>
+        </View>
       </View>
     );
   }
 
-  // ─── RESULTS STATE ───────────────────────────────────
-  if (screenState === STATES.RESULTS && results) {
-    return (
-      <ScrollView contentContainerStyle={styles.resultsContainer}>
-        {imageUri && <Image source={{ uri: imageUri }} style={styles.resultImage} />}
-        <View style={styles.card}>
-          <Text style={styles.dishName}>{results.dish_name}</Text>
-          <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{Math.round(results.calories)}</Text>
-              <Text style={styles.statLabel}>kcal</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{Math.round(results.kilojoules)}</Text>
-              <Text style={styles.statLabel}>kJ</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{results.confidence}</Text>
-              <Text style={styles.statLabel}>confidence</Text>
-            </View>
-          </View>
-          {results.ingredients && results.ingredients.length > 0 && (
-            <View style={styles.ingredientsSection}>
-              <Text style={styles.ingredientsTitle}>Ingredients</Text>
-              {results.ingredients.map((item, index) => (
-                <View key={index} style={styles.ingredientRow}>
-                  <Text style={styles.ingredientName}>{item.name}</Text>
-                  <Text style={styles.ingredientCal}>{Math.round(item.calories)} kcal</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-        <Pressable style={styles.primaryBtn} onPress={resetScanner}>
-          <Text style={styles.primaryBtnText}>Scan Another</Text>
-        </Pressable>
-      </ScrollView>
-    );
-  }
-
-  // ─── ERROR STATE ─────────────────────────────────────
+  // ── ERROR ─────────────────────────────────────────────────────────────────
   return (
-    <View style={styles.container}>
+    <View style={styles.centeredScreen}>
       <View style={styles.errorIconBox}>
-        <Text style={styles.errorIcon}>!</Text>
+        <Ionicons name="alert-circle-outline" size={40} color={colors.error} />
       </View>
-      <Text style={styles.errorText}>{errorMsg}</Text>
-      <Pressable style={styles.primaryBtn} onPress={resetScanner}>
+      <Text style={styles.screenTitle}>Something went wrong</Text>
+      <Text style={styles.screenSubtitle}>{errorMsg}</Text>
+      <Pressable style={[styles.primaryBtn, { width: '100%' }]} onPress={resetScanner}>
+        <Ionicons name="refresh-outline" size={18} color={colors.white} />
         <Text style={styles.primaryBtnText}>Try Again</Text>
       </Pressable>
     </View>
@@ -258,194 +159,109 @@ export default function ScannerScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
     backgroundColor: colors.background,
+    gap: spacing.lg,
   },
-  resultsContainer: {
+
+  scannerCard: {
+    width: '100%',
+    height: 220,
+    backgroundColor: colors.backgroundAlt,
+    borderRadius: radii.xl,
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing.lg,
-    paddingBottom: 40,
+    gap: spacing.md,
+    position: 'relative',
+  },
+
+  corner: { position: 'absolute', width: 24, height: 24, borderColor: colors.primary },
+  cornerTL: { top: 18, left: 18, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 4 },
+  cornerTR: { top: 18, right: 18, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 4 },
+  cornerBL: { bottom: 18, left: 18, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 4 },
+  cornerBR: { bottom: 18, right: 18, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 4 },
+
+  cameraIconCircle: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: colors.primary,
+    justifyContent: 'center', alignItems: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3, shadowRadius: 14, elevation: 6,
+  },
+  scannerHint: { fontSize: 14, color: colors.textMuted, fontWeight: '500' },
+
+  titleSection: { width: '100%', alignItems: 'center', gap: spacing.xs },
+
+  btnStack: { width: '100%', gap: spacing.md },
+
+  centeredScreen: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
     backgroundColor: colors.background,
+    gap: spacing.sm,
   },
-  title: {
-    ...typography.h1,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    ...typography.body,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-  },
+
+  screenTitle: { ...typography.h1, textAlign: 'center', marginBottom: spacing.xs },
+  screenSubtitle: { ...typography.body, textAlign: 'center', lineHeight: 22 },
+
+  btnRow: { flexDirection: 'row', gap: spacing.md, width: '100%', marginTop: spacing.md },
+
   primaryBtn: {
     backgroundColor: colors.primary,
     paddingVertical: 16,
-    paddingHorizontal: 36,
     borderRadius: radii.pill,
-    marginTop: spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.sm,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25, shadowRadius: 8, elevation: 3,
   },
-  primaryBtnText: {
-    ...typography.button,
-  },
-  secondaryBtn: {
-    borderWidth: 2,
+  primaryBtnText: { ...typography.button },
+
+  outlineBtn: {
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: radii.pill,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1.5,
     borderColor: colors.border,
-    paddingVertical: 14,
-    paddingHorizontal: 36,
+  },
+  outlineBtnFlex: {
+    flex: 1,
+    paddingVertical: 16,
     borderRadius: radii.pill,
-    marginTop: spacing.md,
-  },
-  secondaryBtnText: {
-    color: colors.textSecondary,
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  row: {
     flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: spacing.sm,
-  },
-
-  // Camera
-  cameraContainer: { flex: 1, backgroundColor: colors.black },
-  camera: { flex: 1 },
-  cameraOverlay: { flex: 1, justifyContent: 'space-between' },
-  cameraTopBar: { paddingTop: 60, alignItems: 'center' },
-  cameraTitle: {
-    color: colors.white,
-    fontSize: 18,
-    fontWeight: '600',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: radii.pill,
-    overflow: 'hidden',
-  },
-  cameraBottomBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 30,
-    paddingBottom: 50,
-  },
-  captureBtn: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    borderWidth: 4,
-    borderColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1.5,
+    borderColor: colors.border,
   },
-  captureBtnInner: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    backgroundColor: colors.white,
-  },
-  galleryBtn: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: radii.pill,
-  },
-  galleryBtnText: {
-    color: colors.white,
-    fontWeight: '600',
-    fontSize: 14,
-  },
+  outlineBtnText: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
 
-  // Preview
   previewImage: {
-    width: 300,
-    height: 300,
-    borderRadius: radii.lg,
-    marginBottom: spacing.sm,
+    width: '100%', height: 280,
+    borderRadius: radii.xl,
+    marginVertical: spacing.md,
   },
 
-  // Results
-  resultImage: {
-    width: '100%',
-    height: 220,
-    borderRadius: radii.lg,
-    marginBottom: spacing.md,
-  },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    width: '100%',
-    marginBottom: spacing.sm,
-  },
-  dishName: {
-    ...typography.h1,
-    marginBottom: spacing.md,
-    textAlign: 'center',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: spacing.lg,
-  },
-  statBox: { alignItems: 'center' },
-  statValue: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.primary,
-  },
-  statLabel: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  ingredientsSection: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: spacing.md,
-  },
-  ingredientsTitle: {
-    ...typography.h2,
-    marginBottom: spacing.md,
-  },
-  ingredientRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  ingredientName: {
-    fontSize: 15,
-    color: colors.textPrimary,
-  },
-  ingredientCal: {
-    fontSize: 15,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-
-  // Error
   errorIconBox: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#FFE0E0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  errorIcon: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: colors.error,
-  },
-  errorText: {
-    ...typography.body,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.lg,
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: '#FFF0F0',
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: spacing.md,
   },
 });

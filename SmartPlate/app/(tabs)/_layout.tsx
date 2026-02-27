@@ -8,30 +8,31 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        headerShown: true,
+        headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.background,
+          backgroundColor: colors.white,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          paddingBottom: 6,
-          paddingTop: 6,
-          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
+          height: 64,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: '600',
+          marginTop: 2,
         },
-        headerStyle: {
-          backgroundColor: colors.background,
-        },
-        headerTitleStyle: {
-          color: colors.textPrimary,
-          fontWeight: '700',
-          fontSize: 18,
-        },
-        headerShadowVisible: false,
       }}
     >
+      <Tabs.Screen
+        name="home"
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" size={size} color={color} />
+          ),
+        }}
+      />
       <Tabs.Screen
         name="index"
         options={{

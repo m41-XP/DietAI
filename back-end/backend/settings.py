@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'users',
     'scanner',
+    'planner',
 ]
 
 AUTH_USER_MODEL = 'users.CustomUser'
@@ -146,6 +147,18 @@ GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='')
 
 # Gemini AI
 GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
+HF_TOKEN = config('HF_TOKEN', default='')
+FAL_KEY = config('FAL_KEY', default='')
+
+# Pexels (food images for meal plan cards)
+PEXELS_API_KEY = config('PEXELS_API_KEY', default='')
+
+# Spoonacular (real recipe data with images)
+SPOONACULAR_API_KEY = config('Spoonacular_API_KEY', default='')
+
+# Edamam Recipe Search API
+EDAMAM_APP_ID = config('EDAMAM_APP_ID', default='')
+EDAMAM_APP_KEY = config('EDAMAM_APP_KEY', default='')
 
 # Allow up to 10 MB request bodies (for base64-encoded food images)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
@@ -187,3 +200,18 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Email
+# In development: prints emails to the console
+# In production: switch to SMTP (Gmail, SendGrid, etc.)
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.SmtpEmailBackend'
+    EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+    EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='SmartPlate <noreply@smartplate.app>')
