@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,14 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { setPendingChef } from '../../src/stores/resultStore';
 import { colors, radii, spacing, typography } from '../../src/theme';
+import { AuthContext } from '../../src/context/AuthContext';
+import { useAuthSheet } from '../../src/context/AuthSheetContext';
+import {
+  CHEF_LIMIT,
+  GUEST_CHEF_KEY,
+  getGuestCount,
+  incrementGuestCount,
+} from '../../src/utils/guestLimits';
 
 const CUISINES = [
   { label: 'Moroccan', emoji: '🇲🇦' },
@@ -32,10 +40,19 @@ const CUISINES = [
 
 export default function ChefScreen() {
   const router = useRouter();
+  const { userToken } = useContext(AuthContext);
+  const { openRegister, openLogin } = useAuthSheet();
   const [ingredientInput, setIngredientInput] = useState('');
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [selectedCuisine, setSelectedCuisine] = useState('');
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [chefsUsed, setChefsUsed] = useState(0);
+  const [limitModal, setLimitModal] = useState(false);
+
+  useEffect(() => {
+    if (userToken) { setChefsUsed(0); return; }
+    getGuestCount(GUEST_CHEF_KEY).then(setChefsUsed);
+  }, [userToken]);
 
   const addIngredient = () => {
     const val = ingredientInput.trim();
@@ -52,8 +69,17 @@ export default function ChefScreen() {
     setIngredients((prev) => prev.filter((i) => i !== item));
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (ingredients.length === 0 || !selectedCuisine) return;
+    // Guest limit check
+    if (!userToken && chefsUsed >= CHEF_LIMIT) {
+      setLimitModal(true);
+      return;
+    }
+    if (!userToken) {
+      const newCount = await incrementGuestCount(GUEST_CHEF_KEY);
+      setChefsUsed(newCount);
+    }
     setPendingChef({ ingredients, cuisine: selectedCuisine });
     router.push('/chef-result');
     setIngredients([]);
@@ -63,6 +89,8 @@ export default function ChefScreen() {
 
   const canGenerate = ingredients.length > 0 && selectedCuisine !== '';
   const selectedCuisineObj = CUISINES.find((c) => c.label === selectedCuisine);
+  const chefsLeft = Math.max(0, CHEF_LIMIT - chefsUsed);
+  const isGuest = !userToken;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -80,6 +108,21 @@ export default function ChefScreen() {
             <Text style={styles.headerSubtitle}>
               Add your ingredients and pick a cuisine — we'll generate a dish for you.
             </Text>
+            {/* Guest usage badge */}
+            {isGuest && (
+              <View style={[styles.usageBadge, chefsLeft === 0 && styles.usageBadgeEmpty]}>
+                <Ionicons
+                  name={chefsLeft > 0 ? 'restaurant-outline' : 'lock-closed-outline'}
+                  size={13}
+                  color={chefsLeft > 0 ? colors.primary : colors.error}
+                />
+                <Text style={[styles.usageBadgeText, chefsLeft === 0 && styles.usageBadgeTextEmpty]}>
+                  {chefsLeft > 0
+                    ? `${chefsLeft} free recipe${chefsLeft !== 1 ? 's' : ''} remaining`
+                    : 'No free recipes left — sign up to continue'}
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Ingredients */}
@@ -186,6 +229,37 @@ export default function ChefScreen() {
           />
         </View>
       </Modal>
+
+      {/* Limit reached modal */}
+      <Modal visible={limitModal} transparent animationType="fade" onRequestClose={() => setLimitModal(false)}>
+        <Pressable style={styles.limitBackdrop} onPress={() => setLimitModal(false)} />
+        <View style={styles.limitModalWrap}>
+          <View style={styles.limitModal}>
+            <View style={styles.limitIconCircle}>
+              <Ionicons name="lock-closed" size={28} color={colors.primary} />
+            </View>
+            <Text style={styles.limitTitle}>You've used all {CHEF_LIMIT} free recipes</Text>
+            <Text style={styles.limitSubtitle}>
+              Create a free account to generate unlimited dishes and save your favourites.
+            </Text>
+            <Pressable
+              style={styles.limitPrimaryBtn}
+              onPress={() => { setLimitModal(false); openRegister(); }}
+            >
+              <Text style={styles.limitPrimaryBtnText}>Create Free Account</Text>
+            </Pressable>
+            <Pressable
+              style={styles.limitSecondaryBtn}
+              onPress={() => { setLimitModal(false); openLogin(); }}
+            >
+              <Text style={styles.limitSecondaryBtnText}>Sign In</Text>
+            </Pressable>
+            <Pressable onPress={() => setLimitModal(false)} style={styles.limitCloseBtn}>
+              <Text style={styles.limitCloseBtnText}>Maybe later</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -217,6 +291,20 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     paddingHorizontal: spacing.md,
   },
+
+  usageBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: radii.pill,
+    marginTop: spacing.sm,
+  },
+  usageBadgeEmpty: { backgroundColor: '#FFF0F0' },
+  usageBadgeText: { fontSize: 13, fontWeight: '600', color: colors.primary },
+  usageBadgeTextEmpty: { color: colors.error },
 
   sectionLabel: {
     fontSize: 15,
@@ -329,4 +417,48 @@ const styles = StyleSheet.create({
   modalOptionLabel: { flex: 1, fontSize: 16, color: colors.textPrimary, fontWeight: '500' },
   modalOptionLabelSelected: { color: colors.primary, fontWeight: '700' },
   modalSeparator: { height: 1, backgroundColor: colors.border, marginLeft: 56 },
+
+  // Limit modal
+  limitBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
+  limitModalWrap: {
+    position: 'absolute',
+    bottom: 0, left: 0, right: 0,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: 40,
+  },
+  limitModal: {
+    backgroundColor: colors.white,
+    borderRadius: radii.xl,
+    padding: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  limitIconCircle: {
+    width: 64, height: 64, borderRadius: 32,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  limitTitle: { ...typography.h1, textAlign: 'center', fontSize: 20 },
+  limitSubtitle: { ...typography.body, textAlign: 'center', color: colors.textSecondary, lineHeight: 22 },
+  limitPrimaryBtn: {
+    width: '100%',
+    backgroundColor: colors.primary,
+    paddingVertical: 15,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  limitPrimaryBtnText: { ...typography.button },
+  limitSecondaryBtn: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.border,
+  },
+  limitSecondaryBtnText: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
+  limitCloseBtn: { paddingVertical: spacing.sm },
+  limitCloseBtnText: { fontSize: 14, color: colors.textMuted },
 });

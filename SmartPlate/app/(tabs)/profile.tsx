@@ -56,20 +56,26 @@ export default function ProfileScreen() {
   // ── Guest View ──
   if (!userToken) {
     return (
-      <SafeAreaView style={styles.guestContainer}>
-        <View style={styles.guestIconWrap}>
-          <Ionicons name="lock-closed-outline" size={36} color={colors.primary} />
+      <SafeAreaView style={styles.guestScreen}>
+        <View style={styles.guestLogoBox}>
+          <Ionicons name="person-outline" size={40} color={colors.primary} />
         </View>
-        <Text style={styles.guestTitle}>Sign in to view your profile</Text>
-        <Text style={styles.guestSubtitle}>
-          Track your scans, manage your settings,{'\n'}and monitor your nutrition goals.
+        <Text style={styles.guestAppName}>Profile</Text>
+        <Text style={styles.guestTitle}>
+          Your progress,{'\n'}
+          <Text style={{ color: colors.primary }}>all in one place</Text>
         </Text>
-        <Pressable style={styles.signInBtn} onPress={openLogin}>
-          <Text style={styles.signInBtnText}>Sign In</Text>
-        </Pressable>
-        <Pressable style={styles.signUpBtn} onPress={openRegister}>
-          <Text style={styles.signUpBtnText}>Create Account</Text>
-        </Pressable>
+        <Text style={styles.guestSubtitle}>
+          Track your nutrition goals, manage settings,{'\n'}and monitor your weekly progress.
+        </Text>
+        <View style={styles.guestAuthRow}>
+          <Pressable style={styles.guestSignUpBtn} onPress={openRegister}>
+            <Text style={styles.guestSignUpBtnText}>Sign Up</Text>
+          </Pressable>
+          <Pressable style={styles.guestSignInBtn} onPress={openLogin}>
+            <Text style={styles.guestSignInBtnText}>Sign In</Text>
+          </Pressable>
+        </View>
       </SafeAreaView>
     );
   }
@@ -177,40 +183,52 @@ const styles = StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.background },
   listContent: { paddingBottom: spacing.xxl },
 
-  guestContainer: {
+  // Guest screen (welcome-style)
+  guestScreen: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing.xl,
     backgroundColor: colors.background,
+    paddingHorizontal: spacing.xl,
   },
-  guestIconWrap: {
-    width: 84, height: 84, borderRadius: 42,
-    backgroundColor: '#EBF7D9',
+  guestLogoBox: {
+    width: 88, height: 88,
+    borderRadius: radii.xl,
+    backgroundColor: colors.primaryLight,
     justifyContent: 'center', alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  guestAppName: {
+    fontSize: 15, fontWeight: '700',
+    color: colors.primary, letterSpacing: 1,
     marginBottom: spacing.lg,
   },
-  guestTitle: { ...typography.h1, marginBottom: spacing.sm, textAlign: 'center' },
+  guestTitle: {
+    fontSize: 32, fontWeight: '800',
+    color: colors.textPrimary,
+    textAlign: 'center', lineHeight: 40,
+    marginBottom: spacing.md,
+  },
   guestSubtitle: {
-    ...typography.body, textAlign: 'center', lineHeight: 22,
-    color: colors.textSecondary, marginBottom: spacing.xl,
+    ...typography.body,
+    textAlign: 'center', lineHeight: 23,
+    marginBottom: spacing.xl,
   },
-  signInBtn: {
-    backgroundColor: colors.primary,
-    paddingVertical: 16, paddingHorizontal: 60,
-    borderRadius: radii.pill, marginBottom: spacing.md,
-    minWidth: 200, alignItems: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25, shadowRadius: 8, elevation: 3,
+  guestAuthRow: {
+    flexDirection: 'row', gap: spacing.md,
+    width: '100%',
   },
-  signInBtnText: { ...typography.button },
-  signUpBtn: {
-    borderWidth: 1.5, borderColor: colors.primary,
-    paddingVertical: 15, paddingHorizontal: 60,
-    borderRadius: radii.pill, minWidth: 200, alignItems: 'center',
+  guestSignUpBtn: {
+    flex: 1, backgroundColor: colors.primary,
+    paddingVertical: 16, borderRadius: radii.pill, alignItems: 'center',
   },
-  signUpBtnText: { ...typography.button, color: colors.primary },
+  guestSignUpBtnText: { ...typography.button },
+  guestSignInBtn: {
+    flex: 1, backgroundColor: colors.background,
+    paddingVertical: 16, borderRadius: radii.pill, alignItems: 'center',
+    borderWidth: 1.5, borderColor: colors.border,
+  },
+  guestSignInBtnText: { ...typography.button, color: colors.textPrimary },
 
   profileTop: {
     alignItems: 'center',

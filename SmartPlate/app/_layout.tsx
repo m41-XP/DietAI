@@ -1,5 +1,5 @@
-import { useContext, useEffect } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { useContext, useEffect, useRef } from 'react';
+import { Stack, useRouter } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { AuthProvider, AuthContext } from '../src/context/AuthContext';
 import { AuthSheetProvider } from '../src/context/AuthSheetContext';
@@ -7,35 +7,39 @@ import { getProfile } from '../src/services/api';
 
 function RootLayoutNav() {
   const { userToken, isLoading } = useContext(AuthContext);
-  const segments = useSegments();
   const router = useRouter();
+  // Track whether we've already run the profile check for the current session
+  // so we don't re-run it on every navigation segment change.
+  const hasCheckedProfile = useRef(false);
 
   useEffect(() => {
     if (isLoading) return;
 
-    const onAuthScreen =
-      segments[0] === 'login' ||
-      segments[0] === 'register' ||
-      segments[0] === undefined; // index (welcome)
-
-    if (userToken && onAuthScreen) {
-      // Check backend — each user's profile is server-side, not local
-      getProfile()
-        .then(() => {
-          // Profile exists on the backend for this user → skip onboarding
-          router.replace('/(tabs)');
-        })
-        .catch((err: any) => {
-          if (err?.response?.status === 404) {
-            // No profile yet → this user needs onboarding
-            router.replace('/onboarding');
-          } else {
-            // Network error or other issue → go to tabs (don't block the user)
-            router.replace('/(tabs)');
-          }
-        });
+    if (!userToken) {
+      // Reset on logout so the check runs again on next login
+      hasCheckedProfile.current = false;
+      return;
     }
-  }, [userToken, isLoading, segments]);
+
+    if (hasCheckedProfile.current) return;
+    hasCheckedProfile.current = true;
+
+    // Check backend — works regardless of which screen triggered the login
+    getProfile()
+      .then(() => {
+        // Profile exists → go straight to tabs
+        router.replace('/(tabs)');
+      })
+      .catch((err: any) => {
+        if (err?.response?.status === 404) {
+          // No profile yet → needs onboarding
+          router.replace('/onboarding');
+        } else {
+          // Network error → don't block the user
+          router.replace('/(tabs)');
+        }
+      });
+  }, [userToken, isLoading]);
 
   if (isLoading) {
     return (

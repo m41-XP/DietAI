@@ -63,7 +63,7 @@ function MealImage({ imageUrl }: { imageUrl?: string }) {
 
 export default function PlanScreen() {
   const { userToken } = useContext(AuthContext);
-  const { openLogin } = useAuthSheet();
+  const { openLogin, openRegister } = useAuthSheet();
 
   const today = new Date().toISOString().slice(0, 10);
   const [weekStart] = useState(getMondayOf(new Date()));
@@ -149,16 +149,24 @@ export default function PlanScreen() {
   // ── Guest ──
   if (!userToken) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}><Text style={styles.headerTitle}>Meal Plan</Text></View>
-        <View style={styles.centered}>
-          <View style={styles.lockBox}>
-            <Ionicons name="lock-closed" size={32} color={colors.textMuted} />
-          </View>
-          <Text style={styles.lockTitle}>Your personalised plan awaits</Text>
-          <Text style={styles.lockSubtitle}>Sign in to get an AI meal plan tailored to your goals.</Text>
-          <Pressable style={styles.signInBtn} onPress={openLogin}>
-            <Text style={styles.signInBtnText}>Sign In</Text>
+      <SafeAreaView style={styles.guestScreen}>
+        <View style={styles.guestLogoBox}>
+          <Ionicons name="calendar-outline" size={40} color={colors.primary} />
+        </View>
+        <Text style={styles.guestAppName}>Meal Plan</Text>
+        <Text style={styles.guestTitle}>
+          Your weekly plan,{'\n'}
+          <Text style={{ color: colors.primary }}>built by AI</Text>
+        </Text>
+        <Text style={styles.guestSubtitle}>
+          Get a personalised 7-day meal plan tailored{'\n'}to your goals and cuisine preferences.
+        </Text>
+        <View style={styles.guestAuthRow}>
+          <Pressable style={styles.guestSignUpBtn} onPress={openRegister}>
+            <Text style={styles.guestSignUpBtnText}>Sign Up</Text>
+          </Pressable>
+          <Pressable style={styles.guestSignInBtn} onPress={openLogin}>
+            <Text style={styles.guestSignInBtnText}>Sign In</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -446,11 +454,6 @@ const styles = StyleSheet.create({
   emptySlotText: { fontSize: 14, color: colors.textMuted, fontStyle: 'italic' },
 
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl, gap: spacing.sm },
-  lockBox: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: colors.backgroundAlt,
-    justifyContent: 'center', alignItems: 'center', marginBottom: spacing.sm,
-  },
   lockTitle: { ...typography.h1, textAlign: 'center' },
   lockSubtitle: { ...typography.body, textAlign: 'center', color: colors.textSecondary, lineHeight: 22 },
   signInBtn: {
@@ -459,4 +462,51 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill, marginTop: spacing.md,
   },
   signInBtnText: { ...typography.button },
+
+  // Guest screen (welcome-style)
+  guestScreen: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.xl,
+  },
+  guestLogoBox: {
+    width: 88, height: 88,
+    borderRadius: radii.xl,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  guestAppName: {
+    fontSize: 15, fontWeight: '700',
+    color: colors.primary, letterSpacing: 1,
+    marginBottom: spacing.lg,
+  },
+  guestTitle: {
+    fontSize: 32, fontWeight: '800',
+    color: colors.textPrimary,
+    textAlign: 'center', lineHeight: 40,
+    marginBottom: spacing.md,
+  },
+  guestSubtitle: {
+    ...typography.body,
+    textAlign: 'center', lineHeight: 23,
+    marginBottom: spacing.xl,
+  },
+  guestAuthRow: {
+    flexDirection: 'row', gap: spacing.md,
+    width: '100%',
+  },
+  guestSignUpBtn: {
+    flex: 1, backgroundColor: colors.primary,
+    paddingVertical: 16, borderRadius: radii.pill, alignItems: 'center',
+  },
+  guestSignUpBtnText: { ...typography.button },
+  guestSignInBtn: {
+    flex: 1, backgroundColor: colors.background,
+    paddingVertical: 16, borderRadius: radii.pill, alignItems: 'center',
+    borderWidth: 1.5, borderColor: colors.border,
+  },
+  guestSignInBtnText: { ...typography.button, color: colors.textPrimary },
 });

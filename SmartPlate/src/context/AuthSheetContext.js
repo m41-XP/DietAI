@@ -81,7 +81,42 @@ export function AuthSheetProvider({ children }) {
   const [verifyError, setVerifyError] = useState('');
   const [verifySuccess, setVerifySuccess] = useState('');
 
-  // Auto-close sheets when user logs in
+  // ── Per-sheet state reset helpers ────────────────────────────────────────
+  const clearLoginForm = useCallback(() => {
+    setLoginEmail('');
+    setLoginPassword('');
+    setLoginError('');
+  }, []);
+
+  const clearRegisterForm = useCallback(() => {
+    setRegFirstName('');
+    setRegLastName('');
+    setRegEmail('');
+    setRegPassword('');
+    setRegConfirm('');
+    setRegError('');
+  }, []);
+
+  const clearVerifyForm = useCallback(() => {
+    setVerifyCode('');
+    setVerifyError('');
+    setVerifySuccess('');
+  }, []);
+
+  const clearForgotForm = useCallback(() => {
+    setForgotEmail('');
+    setForgotError('');
+  }, []);
+
+  const clearResetForm = useCallback(() => {
+    setResetCode('');
+    setResetPassword('');
+    setResetConfirm('');
+    setResetError('');
+    setResetSuccess('');
+  }, []);
+
+  // Auto-close sheets when user logs in and wipe all form state
   useEffect(() => {
     if (userToken) {
       loginSheetRef.current?.close();
@@ -89,16 +124,21 @@ export function AuthSheetProvider({ children }) {
       verifySheetRef.current?.close();
       forgotSheetRef.current?.close();
       resetSheetRef.current?.close();
+      clearLoginForm();
+      clearRegisterForm();
+      clearVerifyForm();
+      clearForgotForm();
+      clearResetForm();
     }
   }, [userToken]);
 
   const openLogin = useCallback(() => {
-    setLoginError('');
+    clearLoginForm();
     loginSheetRef.current?.expand();
   }, []);
 
   const openRegister = useCallback(() => {
-    setRegError('');
+    clearRegisterForm();
     registerSheetRef.current?.expand();
   }, []);
 
@@ -304,6 +344,7 @@ export function AuthSheetProvider({ children }) {
           backdropComponent={renderBackdrop}
           backgroundStyle={styles.sheetBg}
           handleIndicatorStyle={styles.sheetHandle}
+          onChange={(index) => { if (index === -1) clearLoginForm(); }}
         >
           <BottomSheetView style={styles.sheetContent}>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -363,7 +404,7 @@ export function AuthSheetProvider({ children }) {
                 onPress={() => {
                   loginSheetRef.current?.close();
                   setTimeout(() => {
-                    setRegError('');
+                    clearRegisterForm();
                     registerSheetRef.current?.expand();
                   }, 300);
                 }}
@@ -385,6 +426,7 @@ export function AuthSheetProvider({ children }) {
           backdropComponent={renderBackdrop}
           backgroundStyle={styles.sheetBg}
           handleIndicatorStyle={styles.sheetHandle}
+          onChange={(index) => { if (index === -1) clearRegisterForm(); }}
         >
           <BottomSheetView style={styles.sheetContent}>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -458,7 +500,7 @@ export function AuthSheetProvider({ children }) {
                 onPress={() => {
                   registerSheetRef.current?.close();
                   setTimeout(() => {
-                    setLoginError('');
+                    clearLoginForm();
                     loginSheetRef.current?.expand();
                   }, 300);
                 }}
@@ -480,6 +522,7 @@ export function AuthSheetProvider({ children }) {
           backdropComponent={renderBackdrop}
           backgroundStyle={styles.sheetBg}
           handleIndicatorStyle={styles.sheetHandle}
+          onChange={(index) => { if (index === -1) clearVerifyForm(); }}
         >
           <BottomSheetView style={styles.sheetContent}>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -538,6 +581,7 @@ export function AuthSheetProvider({ children }) {
           backdropComponent={renderBackdrop}
           backgroundStyle={styles.sheetBg}
           handleIndicatorStyle={styles.sheetHandle}
+          onChange={(index) => { if (index === -1) clearForgotForm(); }}
         >
           <BottomSheetView style={styles.sheetContent}>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -572,7 +616,7 @@ export function AuthSheetProvider({ children }) {
                 onPress={() => {
                   forgotSheetRef.current?.close();
                   setTimeout(() => {
-                    setLoginError('');
+                    clearLoginForm();
                     loginSheetRef.current?.expand();
                   }, 300);
                 }}
@@ -594,6 +638,7 @@ export function AuthSheetProvider({ children }) {
           backdropComponent={renderBackdrop}
           backgroundStyle={styles.sheetBg}
           handleIndicatorStyle={styles.sheetHandle}
+          onChange={(index) => { if (index === -1) clearResetForm(); }}
         >
           <BottomSheetView style={styles.sheetContent}>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>

@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { getToken, setToken, deleteToken } from '../services/tokenStorage';
 import api from '../services/api';
+import { clearGuestCounts } from '../utils/guestLimits';
 
 export const AuthContext = createContext();
 
@@ -28,6 +29,7 @@ export const AuthProvider = ({ children }) => {
   const login = useCallback(async (accessToken, refreshToken) => {
     await setToken('accessToken', accessToken);
     await setToken('refreshToken', refreshToken);
+    await clearGuestCounts();
     setUserToken(accessToken);
   }, []);
 
