@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { getPendingScan, clearPendingScan } from '../src/stores/resultStore';
-import { scanFood, logMeal, addFavorite } from '../src/services/api';
+import { scanFood } from '../src/services/api';
 import { colors, typography, spacing, radii, shadow } from '../src/theme';
 import { AuthContext } from '../src/context/AuthContext';
 
@@ -22,12 +22,7 @@ const CONFIDENCE_COLORS: Record<string, string> = {
   low: colors.error,
 };
 
-const MEAL_TYPES = [
-  { key: 'breakfast', label: 'Breakfast', icon: 'sunny-outline' },
-  { key: 'lunch', label: 'Lunch', icon: 'partly-sunny-outline' },
-  { key: 'dinner', label: 'Dinner', icon: 'moon-outline' },
-  { key: 'snack', label: 'Snack', icon: 'nutrition-outline' },
-] as const;
+
 
 export default function ScanResultScreen() {
   const router = useRouter();
@@ -39,11 +34,7 @@ export default function ScanResultScreen() {
   const [imageBase64, setImageBase64] = useState<string>('');
   const [fromCache, setFromCache] = useState(false);
   const [existingId, setExistingId] = useState<number | null>(null);
-  const [loggingType, setLoggingType] = useState<string | null>(null);
-  const [logSuccess, setLogSuccess] = useState(false);
-  const [logError, setLogError] = useState('');
-  const [favorited, setFavorited] = useState(false);
-  const [favLoading, setFavLoading] = useState(false);
+
 
   useEffect(() => {
     const pending = getPendingScan();
@@ -74,48 +65,7 @@ export default function ScanResultScreen() {
 
   const handleBack = () => router.back();
 
-  const handleFavorite = async () => {
-    if (!results || favLoading || favorited) return;
-    setFavLoading(true);
-    try {
-      await addFavorite({
-        name: results.dish_name,
-        calories: Math.round(results.calories),
-        protein_g: 0,
-        carbs_g: 0,
-        fat_g: 0,
-        preferred_meal_type: 'any',
-        source: 'scan',
-        image_base64: imageBase64,
-      });
-      setFavorited(true);
-    } catch {
-      // silently ignore — button reverts
-    } finally {
-      setFavLoading(false);
-    }
-  };
 
-  const handleLog = async (mealType: string) => {
-    if (!results || loggingType) return;
-    setLoggingType(mealType);
-    setLogError('');
-    try {
-      await logMeal({
-        meal_type: mealType,
-        dish_name: results.dish_name,
-        calories: Math.round(results.calories),
-        protein_g: 0,
-        carbs_g: 0,
-        fat_g: 0,
-      });
-      setLogSuccess(true);
-    } catch (e: any) {
-      setLogError(e.response?.data?.detail || 'Failed to log meal. Try again.');
-    } finally {
-      setLoggingType(null);
-    }
-  };
 
   // ── Loading ──
   if (loading) {
@@ -171,21 +121,7 @@ export default function ScanResultScreen() {
           <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>Scan Result</Text>
-        {userToken && results ? (
-          <Pressable onPress={handleFavorite} style={styles.favBtn} disabled={favLoading || favorited}>
-            {favLoading ? (
-              <ActivityIndicator size="small" color={colors.error} />
-            ) : (
-              <Ionicons
-                name={favorited ? 'heart' : 'heart-outline'}
-                size={22}
-                color={favorited ? colors.error : colors.textSecondary}
-              />
-            )}
-          </Pressable>
-        ) : (
-          <View style={{ width: 40 }} />
-        )}
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView
@@ -252,50 +188,7 @@ export default function ScanResultScreen() {
           )}
         </View>
 
-        {/* Log to meal plan */}
-        {userToken && (
-          <View style={styles.logSection}>
-            {logSuccess ? (
-              <View style={styles.logSuccessBanner}>
-                <Ionicons name="checkmark-circle" size={22} color={colors.success} />
-                <Text style={styles.logSuccessText}>Logged to your meal plan!</Text>
-              </View>
-            ) : (
-              <>
-                <Text style={styles.logTitle}>Log to meal plan</Text>
-                <Text style={styles.logSubtitle}>Choose when you had this meal</Text>
-                <View style={styles.mealTypeRow}>
-                  {MEAL_TYPES.map(({ key, label, icon }) => (
-                    <Pressable
-                      key={key}
-                      style={[
-                        styles.mealTypePill,
-                        !!loggingType && loggingType !== key && styles.mealTypePillDimmed,
-                      ]}
-                      onPress={() => handleLog(key)}
-                      disabled={!!loggingType}
-                    >
-                      {loggingType === key ? (
-                        <ActivityIndicator size="small" color={colors.primary} />
-                      ) : (
-                        <>
-                          <Ionicons name={icon as any} size={16} color={colors.primary} />
-                          <Text style={styles.mealTypePillText}>{label}</Text>
-                        </>
-                      )}
-                    </Pressable>
-                  ))}
-                </View>
-                {logError ? (
-                  <View style={styles.logErrorRow}>
-                    <Ionicons name="alert-circle-outline" size={15} color={colors.error} />
-                    <Text style={styles.logErrorText}>{logError}</Text>
-                  </View>
-                ) : null}
-              </>
-            )}
-          </View>
-        )}
+
 
         <Pressable style={styles.scanAnotherBtn} onPress={handleBack}>
           <Ionicons name="scan-outline" size={18} color={colors.white} />
@@ -344,11 +237,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundAlt,
     justifyContent: 'center', alignItems: 'center',
   },
-  favBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: colors.backgroundAlt,
-    justifyContent: 'center', alignItems: 'center',
-  },
+
   headerTitle: { ...typography.h2 },
 
   scroll: { flex: 1 },
@@ -429,52 +318,7 @@ const styles = StyleSheet.create({
   },
   ingredientCalText: { fontSize: 13, color: colors.primary, fontWeight: '700' },
 
-  // Log section
-  logSection: {
-    backgroundColor: colors.white,
-    borderRadius: radii.xl,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    ...shadow,
-  },
-  logTitle: { ...typography.h2, fontSize: 16, marginBottom: 4 },
-  logSubtitle: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.md },
-  mealTypeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  mealTypePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: radii.pill,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryLight,
-    minWidth: 90,
-    justifyContent: 'center',
-  },
-  mealTypePillDimmed: { opacity: 0.4 },
-  mealTypePillText: { fontSize: 14, fontWeight: '600', color: colors.primary },
-  logSuccessBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: '#F0FFF4',
-    borderRadius: radii.lg,
-    padding: spacing.md,
-  },
-  logSuccessText: { fontSize: 15, fontWeight: '600', color: colors.success },
-  logErrorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    marginTop: spacing.sm,
-  },
-  logErrorText: { fontSize: 13, color: colors.error },
+
 
   scanAnotherBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
