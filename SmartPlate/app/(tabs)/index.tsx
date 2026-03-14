@@ -78,7 +78,7 @@ export default function ScannerScreen() {
 
   const takePhoto = async () => {
     try {
-      const result = await ImagePicker.launchCameraAsync({ quality: 0.7, base64: true });
+      const result = await ImagePicker.launchCameraAsync({ quality: 0.7, base64: true, cameraType: ImagePicker.CameraType.back });
       if (result.canceled) return;
       const asset = result.assets[0];
       let b64 = asset.base64;

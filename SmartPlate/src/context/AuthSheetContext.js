@@ -14,6 +14,7 @@ import BottomSheet, { BottomSheetView, BottomSheetBackdrop } from '@gorhom/botto
 import { AuthContext } from './AuthContext';
 import api from '../services/api';
 import GoogleSignInButton from '../components/GoogleSignInButton';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, radii, spacing, typography } from '../theme';
 
 const AuthSheetContext = createContext({
@@ -47,6 +48,7 @@ export function AuthSheetProvider({ children }) {
   // Login state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
 
@@ -56,6 +58,8 @@ export function AuthSheetProvider({ children }) {
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirm, setRegConfirm] = useState('');
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showRegConfirm, setShowRegConfirm] = useState(false);
   const [regLoading, setRegLoading] = useState(false);
   const [regError, setRegError] = useState('');
 
@@ -69,6 +73,8 @@ export function AuthSheetProvider({ children }) {
   const [resetCode, setResetCode] = useState('');
   const [resetPassword, setResetPassword] = useState('');
   const [resetConfirm, setResetConfirm] = useState('');
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [resetError, setResetError] = useState('');
   const [resetSuccess, setResetSuccess] = useState('');
@@ -359,14 +365,19 @@ export function AuthSheetProvider({ children }) {
                 autoCapitalize="none"
                 keyboardType="email-address"
               />
-              <TextInput
-                style={[styles.input, loginError && styles.inputError]}
-                placeholder="Password"
-                placeholderTextColor={colors.textMuted}
-                value={loginPassword}
-                onChangeText={(t) => { setLoginPassword(t); setLoginError(''); }}
-                secureTextEntry
-              />
+              <View style={[styles.passwordRow, loginError && styles.inputError]}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Password"
+                  placeholderTextColor={colors.textMuted}
+                  value={loginPassword}
+                  onChangeText={(t) => { setLoginPassword(t); setLoginError(''); }}
+                  secureTextEntry={!showLoginPassword}
+                />
+                <Pressable onPress={() => setShowLoginPassword(v => !v)} style={styles.eyeBtn}>
+                  <Ionicons name={showLoginPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textMuted} />
+                </Pressable>
+              </View>
               <Pressable
                 style={[styles.submitBtn, loginLoading && styles.btnDisabled]}
                 onPress={handleLogin}
@@ -459,22 +470,32 @@ export function AuthSheetProvider({ children }) {
                 autoCapitalize="none"
                 keyboardType="email-address"
               />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor={colors.textMuted}
-                value={regPassword}
-                onChangeText={(t) => { setRegPassword(t); setRegError(''); }}
-                secureTextEntry
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Confirm Password"
-                placeholderTextColor={colors.textMuted}
-                value={regConfirm}
-                onChangeText={(t) => { setRegConfirm(t); setRegError(''); }}
-                secureTextEntry
-              />
+              <View style={[styles.passwordRow, regError && styles.inputError]}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Password"
+                  placeholderTextColor={colors.textMuted}
+                  value={regPassword}
+                  onChangeText={(t) => { setRegPassword(t); setRegError(''); }}
+                  secureTextEntry={!showRegPassword}
+                />
+                <Pressable onPress={() => setShowRegPassword(v => !v)} style={styles.eyeBtn}>
+                  <Ionicons name={showRegPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textMuted} />
+                </Pressable>
+              </View>
+              <View style={[styles.passwordRow, regError && styles.inputError]}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Confirm Password"
+                  placeholderTextColor={colors.textMuted}
+                  value={regConfirm}
+                  onChangeText={(t) => { setRegConfirm(t); setRegError(''); }}
+                  secureTextEntry={!showRegConfirm}
+                />
+                <Pressable onPress={() => setShowRegConfirm(v => !v)} style={styles.eyeBtn}>
+                  <Ionicons name={showRegConfirm ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textMuted} />
+                </Pressable>
+              </View>
               <Pressable
                 style={[styles.submitBtn, regLoading && styles.btnDisabled]}
                 onPress={handleRegister}
@@ -659,22 +680,32 @@ export function AuthSheetProvider({ children }) {
                 maxLength={6}
                 textAlign="center"
               />
-              <TextInput
-                style={[styles.input, resetError && styles.inputError]}
-                placeholder="New Password"
-                placeholderTextColor={colors.textMuted}
-                value={resetPassword}
-                onChangeText={(t) => { setResetPassword(t); setResetError(''); }}
-                secureTextEntry
-              />
-              <TextInput
-                style={[styles.input, resetError && styles.inputError]}
-                placeholder="Confirm New Password"
-                placeholderTextColor={colors.textMuted}
-                value={resetConfirm}
-                onChangeText={(t) => { setResetConfirm(t); setResetError(''); }}
-                secureTextEntry
-              />
+              <View style={[styles.passwordRow, resetError && styles.inputError]}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="New Password"
+                  placeholderTextColor={colors.textMuted}
+                  value={resetPassword}
+                  onChangeText={(t) => { setResetPassword(t); setResetError(''); }}
+                  secureTextEntry={!showResetPassword}
+                />
+                <Pressable onPress={() => setShowResetPassword(v => !v)} style={styles.eyeBtn}>
+                  <Ionicons name={showResetPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textMuted} />
+                </Pressable>
+              </View>
+              <View style={[styles.passwordRow, resetError && styles.inputError]}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Confirm New Password"
+                  placeholderTextColor={colors.textMuted}
+                  value={resetConfirm}
+                  onChangeText={(t) => { setResetConfirm(t); setResetError(''); }}
+                  secureTextEntry={!showResetConfirm}
+                />
+                <Pressable onPress={() => setShowResetConfirm(v => !v)} style={styles.eyeBtn}>
+                  <Ionicons name={showResetConfirm ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textMuted} />
+                </Pressable>
+              </View>
               <Pressable
                 style={[styles.submitBtn, resetLoading && styles.btnDisabled]}
                 onPress={handleResetPassword}
@@ -768,5 +799,23 @@ const styles = StyleSheet.create({
   },
   successText: {
     color: '#2D8A4E',
+  },
+  passwordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.inputBg,
+    borderRadius: radii.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 16,
+    fontSize: 16,
+    color: colors.textPrimary,
+  },
+  eyeBtn: {
+    padding: 16,
   },
 });

@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import api from '../src/services/api';
 import { AuthContext } from '../src/context/AuthContext';
 import { useRouter } from 'expo-router';
@@ -16,6 +17,7 @@ import GoogleSignInButton from '../src/components/GoogleSignInButton';
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login } = useContext(AuthContext);
   const router = useRouter();
@@ -71,14 +73,19 @@ export default function LoginScreen() {
         keyboardType="email-address"
         textContentType="emailAddress"
       />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        secureTextEntry
-        onChangeText={setPassword}
-        textContentType="password"
-      />
+      <View style={styles.inputRow}>
+        <TextInput
+          style={styles.inputFlex}
+          placeholder="Password"
+          value={password}
+          secureTextEntry={!showPassword}
+          onChangeText={setPassword}
+          textContentType="password"
+        />
+        <Pressable onPress={() => setShowPassword(v => !v)} style={styles.eyeBtn}>
+          <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#999" />
+        </Pressable>
+      </View>
       <Pressable
         style={[styles.button, loading && styles.buttonDisabled]}
         onPress={handleLogin}
@@ -116,6 +123,15 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontSize: 16,
   },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderColor: '#ccc',
+    marginBottom: 20,
+  },
+  inputFlex: { flex: 1, padding: 10, fontSize: 16 },
+  eyeBtn: { padding: 10 },
   button: {
     backgroundColor: '#000',
     padding: 15,

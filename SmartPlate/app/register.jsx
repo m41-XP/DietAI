@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import api from '../src/services/api';
 import { useRouter } from 'expo-router';
 import GoogleSignInButton from '../src/components/GoogleSignInButton';
@@ -16,6 +17,8 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -84,20 +87,32 @@ export default function RegisterScreen() {
         autoCapitalize="none"
         keyboardType="email-address"
       />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        secureTextEntry
-        onChangeText={setPassword}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Confirm Password"
-        value={passwordConfirm}
-        secureTextEntry
-        onChangeText={setPasswordConfirm}
-      />
+      <View style={styles.inputRow}>
+        <TextInput
+          style={styles.inputFlex}
+          placeholder="Password"
+          value={password}
+          secureTextEntry={!showPassword}
+          onChangeText={setPassword}
+          textContentType="password"
+        />
+        <Pressable onPress={() => setShowPassword(v => !v)} style={styles.eyeBtn}>
+          <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#999" />
+        </Pressable>
+      </View>
+      <View style={styles.inputRow}>
+        <TextInput
+          style={styles.inputFlex}
+          placeholder="Confirm Password"
+          value={passwordConfirm}
+          secureTextEntry={!showPasswordConfirm}
+          onChangeText={setPasswordConfirm}
+          textContentType="password"
+        />
+        <Pressable onPress={() => setShowPasswordConfirm(v => !v)} style={styles.eyeBtn}>
+          <Ionicons name={showPasswordConfirm ? 'eye-off-outline' : 'eye-outline'} size={20} color="#999" />
+        </Pressable>
+      </View>
       <Pressable
         style={[styles.button, loading && styles.buttonDisabled]}
         onPress={handleRegister}
@@ -135,6 +150,15 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontSize: 16,
   },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderColor: '#ccc',
+    marginBottom: 20,
+  },
+  inputFlex: { flex: 1, padding: 10, fontSize: 16 },
+  eyeBtn: { padding: 10 },
   button: {
     backgroundColor: '#4CAF50',
     padding: 15,

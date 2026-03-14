@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState, useCallback } from 'react';
+import React, { useContext, useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -77,6 +77,8 @@ export default function HomeScreen() {
   const [checkinWeight, setCheckinWeight] = useState('');
   const [checkinRating, setCheckinRating] = useState<'up' | 'down' | null>(null);
   const [checkinSubmitting, setCheckinSubmitting] = useState(false);
+  // Prevents the modal from re-opening after the user already dismissed it this session
+  const checkinDismissed = useRef(false);
 
   const firstName = user?.first_name || user?.email?.split('@')[0] || 'there';
 
@@ -86,16 +88,27 @@ export default function HomeScreen() {
       // Recent scans
       api.get('/api/scans/').then((res) => setRecentScans((res.data || []).slice(0, 3))),
       // Today's plan nutrition
-      getWeekPlan(weekStart).then((res) => {
+      getWeekPlan(weekStart).then(async (res) => {
         const plans: any[] = res.data || [];
         const todayPlan = plans.find((p: any) => p.date === today);
         setHasPlan(plans.length > 0);
         setTodayNutrition(sumPlanNutrition(todayPlan));
 
-        // New week with no plan? Show check-in if there was previous activity
-        if (plans.length === 0) {
-          // Only show check-in popup if user had a profile (would have had a plan before)
-          setShowCheckin(true);
+        // Show check-in only on a new week (plan empty) for returning users,
+        // and only if the user hasn't already dismissed it this session.
+        if (plans.length === 0 && !checkinDismissed.current) {
+          // Check if user ever had a plan (returning user entering a new week)
+          try {
+            // Query last week's plan — if it exists, this is a returning user
+            const lastWeek = new Date();
+            lastWeek.setDate(lastWeek.getDate() - 7);
+            const lastMon = getMondayOf(lastWeek);
+            const historyRes = await api.get(`/api/planner/plan/week/?week_start=${lastMon}`);
+            const hasHistory = (historyRes.data ?? []).length > 0;
+            if (hasHistory) setShowCheckin(true);
+          } catch {
+            // If we can't confirm history, don't show the modal
+          }
         }
       }),
     ]);
@@ -126,6 +139,7 @@ export default function HomeScreen() {
       setTodayNutrition(sumPlanNutrition(todayPlan));
     } catch { /* silent */ }
     finally {
+      checkinDismissed.current = true;
       setCheckinSubmitting(false);
       setShowCheckin(false);
       setCheckinWeight('');
@@ -134,6 +148,7 @@ export default function HomeScreen() {
   };
 
   const handleCheckinSkip = async () => {
+    checkinDismissed.current = true;
     setShowCheckin(false);
     // Still generate the plan even if skipped (no rating)
     try {
