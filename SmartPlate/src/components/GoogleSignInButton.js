@@ -1,36 +1,54 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState } from 'react';
 import { Pressable, Text, StyleSheet, Alert, ActivityIndicator } from 'react-native';
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
+import { GoogleSignin, isErrorWithCode, statusCodes } from '@react-native-google-signin/google-signin';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
 import { colors, radii } from '../theme';
 
-WebBrowser.maybeCompleteAuthSession();
+// The webClientId MUST be the web client ID (the one used for the backend authentication).
+// Native client IDs (like the Android one the user just created) are checked natively by 
+// Google Play Services on the device via the app's SHA-1 fingerprint.
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+  offlineAccess: false,
+});
 
 export default function GoogleSignInButton() {
   const { login } = useContext(AuthContext);
   const [loading, setLoading] = useState(false);
 
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-  });
-
-  useEffect(() => {
-    if (response?.type === 'success') {
-      handleGoogleToken(response.params.id_token);
-    }
-  }, [response]);
-
-  const handleGoogleToken = async (idToken) => {
+  const handleGoogleLogin = async () => {
     setLoading(true);
     try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken || userInfo.idToken;
+
+      if (!idToken) {
+        throw new Error('No ID token returned from Google.');
+      }
+
       const res = await api.post('/api/auth/google/', { id_token: idToken });
       await login(res.data.access, res.data.refresh);
     } catch (error) {
-      const detail =
-        error.response?.data?.detail || 'Google sign-in failed. Please try again.';
-      Alert.alert('Google Sign-In Failed', detail);
+      if (isErrorWithCode(error)) {
+        switch (error.code) {
+          case statusCodes.SIGN_IN_CANCELLED:
+            // user cancelled the login flow (no error needed)
+            break;
+          case statusCodes.IN_PROGRESS:
+            // operation is in progress already
+            break;
+          case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+            Alert.alert('Error', 'Google Play services not available or outdated.');
+            break;
+          default:
+            Alert.alert('Google Sign-In Failed', error.message);
+        }
+      } else {
+        const detail = error.response?.data?.detail || 'Google sign-in failed. Please try again.';
+        Alert.alert('Google Sign-In Failed', detail);
+      }
     } finally {
       setLoading(false);
     }
@@ -39,8 +57,8 @@ export default function GoogleSignInButton() {
   return (
     <Pressable
       style={[styles.googleButton, loading && styles.disabled]}
-      onPress={() => promptAsync()}
-      disabled={!request || loading}
+      onPress={handleGoogleLogin}
+      disabled={loading}
     >
       {loading ? (
         <ActivityIndicator color={colors.textPrimary} />

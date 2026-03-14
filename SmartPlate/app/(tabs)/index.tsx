@@ -78,16 +78,19 @@ export default function ScannerScreen() {
 
   const takePhoto = async () => {
     try {
-      const result = await ImagePicker.launchCameraAsync({ quality: 0.7, base64: true, cameraType: ImagePicker.CameraType.back });
+      const result = await ImagePicker.launchCameraAsync({ 
+        quality: 0.4, 
+        cameraType: ImagePicker.CameraType.back 
+      });
       if (result.canceled) return;
       const asset = result.assets[0];
-      let b64 = asset.base64;
-      if (!b64 && asset.uri) {
-        b64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
-      }
+      
+      // Extract base64 safely via FileSystem to reduce memory spikes
+      const b64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' });
+      
       const ext = asset.uri.split('.').pop()?.toLowerCase();
       const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
-      goToPreview(b64!, mime, asset.uri);
+      goToPreview(b64, mime, asset.uri);
     } catch {
       setErrorMsg('Failed to open camera.');
       setScreenState(STATES.ERROR);
@@ -96,16 +99,19 @@ export default function ScannerScreen() {
 
   const pickImage = async () => {
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7, base64: true });
+      const result = await ImagePicker.launchImageLibraryAsync({ 
+        mediaTypes: ['images'], 
+        quality: 0.4 
+      });
       if (result.canceled) return;
       const asset = result.assets[0];
-      let b64 = asset.base64;
-      if (!b64 && asset.uri) {
-        b64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
-      }
+      
+      // Extract base64 safely via FileSystem to reduce memory spikes
+      const b64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' });
+
       const ext = asset.uri.split('.').pop()?.toLowerCase();
       const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
-      goToPreview(b64!, mime, asset.uri);
+      goToPreview(b64, mime, asset.uri);
     } catch {
       setErrorMsg('Failed to pick image.');
       setScreenState(STATES.ERROR);

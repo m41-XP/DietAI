@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { AuthProvider, AuthContext } from '../src/context/AuthContext';
@@ -8,6 +8,8 @@ import { getProfile } from '../src/services/api';
 function RootLayoutNav() {
   const { userToken, isLoading } = useContext(AuthContext);
   const router = useRouter();
+  const [isProfileReady, setIsProfileReady] = useState(false);
+  
   // Track whether we've already run the profile check for the current session
   // so we don't re-run it on every navigation segment change.
   const hasCheckedProfile = useRef(false);
@@ -18,19 +20,25 @@ function RootLayoutNav() {
     if (!userToken) {
       // Reset on logout so the check runs again on next login
       hasCheckedProfile.current = false;
+      setIsProfileReady(true);
       return;
     }
 
-    if (hasCheckedProfile.current) return;
+    if (hasCheckedProfile.current) {
+      setIsProfileReady(true);
+      return;
+    }
     hasCheckedProfile.current = true;
 
     // Check backend — works regardless of which screen triggered the login
     getProfile()
       .then(() => {
         // Profile exists → go straight to tabs
+        setIsProfileReady(true);
         router.replace('/(tabs)');
       })
       .catch((err: any) => {
+        setIsProfileReady(true);
         if (err?.response?.status === 404) {
           // No profile yet → needs onboarding
           router.replace('/onboarding');
@@ -41,7 +49,7 @@ function RootLayoutNav() {
       });
   }, [userToken, isLoading]);
 
-  if (isLoading) {
+  if (isLoading || (userToken && !isProfileReady)) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#7CC932" />
