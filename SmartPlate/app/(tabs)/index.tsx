@@ -158,6 +158,10 @@ export default function ScannerScreen() {
       if (!b64) {
         throw new Error('Could not extract image data.');
       }
+      
+      // EXPO WEB FIX: Sometimes expo adds the data URI prefix on web.
+      // We must strip it because Django expects raw base64.
+      b64 = b64.replace(/^data:image\/[a-z]+;base64,/, '');
 
       const ext = asset.uri.split('.').pop()?.toLowerCase() || 'jpg';
       const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
