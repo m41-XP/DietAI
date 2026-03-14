@@ -42,6 +42,7 @@ export default function ScannerScreen() {
   const [limitModal, setLimitModal] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<any>(null);
+  const [isCameraReady, setIsCameraReady] = useState(false);
 
   // Load guest scan count on mount / when auth changes
   useEffect(() => {
@@ -53,11 +54,13 @@ export default function ScannerScreen() {
     setScreenState(STATES.IDLE);
     setErrorMsg('');
     setPending(null);
+    setIsCameraReady(false);
   };
 
   const goToPreview = (b64: string, mime: string, uri: string) => {
     setPending({ b64, mime, uri });
     setScreenState(STATES.PREVIEW);
+    setIsCameraReady(false);
   };
 
   const handleAnalyze = async () => {
@@ -93,17 +96,27 @@ export default function ScannerScreen() {
   };
 
   const handleCapture = async () => {
+    if (!isCameraReady) return;
+    
     if (cameraRef.current) {
       try {
-        const photo = await cameraRef.current.takePictureAsync({ quality: 0.4 });
-        if (!photo) return;
+        const photo = await cameraRef.current.takePictureAsync({ 
+          quality: 0.4, 
+          base64: true 
+        });
         
-        const b64 = await FileSystem.readAsStringAsync(photo.uri, { encoding: 'base64' });
+        if (!photo || !photo.base64) {
+          throw new Error('Photo capture returned empty data.');
+        }
+        
         const ext = photo.uri.split('.').pop()?.toLowerCase() || 'jpg';
         const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
-        goToPreview(b64, mime, photo.uri);
-      } catch (err) {
-        setErrorMsg('Failed to capture photo.');
+        
+        // Pass the base64 string directly from the photo object
+        goToPreview(photo.base64, mime, photo.uri);
+      } catch (err: any) {
+        // Show the exact error message so we can debug if it happens again
+        setErrorMsg('Failed to capture: ' + (err?.message || 'Unknown error'));
         setScreenState(STATES.ERROR);
       }
     }
@@ -225,7 +238,12 @@ export default function ScannerScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: 'black' }}>
         <StatusBar hidden />
-        <CameraView ref={cameraRef} style={StyleSheet.absoluteFillObject} facing="back">
+        <CameraView 
+          ref={(r: any) => { cameraRef.current = r; }} 
+          style={StyleSheet.absoluteFillObject} 
+          facing="back"
+          onCameraReady={() => setIsCameraReady(true)}
+        >
           <View style={styles.cameraOverlay}>
             <View style={styles.cameraHeader}>
               <Pressable style={styles.cameraCloseBtn} onPress={resetScanner}>
