@@ -126,19 +126,44 @@ export default function ScannerScreen() {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({ 
         mediaTypes: ['images'], 
-        quality: 0.4 
+        quality: 0.4,
+        base64: true, // Cross-platform base64 extraction
       });
+      
       if (result.canceled) return;
       const asset = result.assets[0];
       
-      // Extract base64 safely via FileSystem to reduce memory spikes
-      const b64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' });
+      let b64 = asset.base64;
+      
+      // Fallback for web if base64 is missing for some reason
+      if (!b64 && asset.uri) {
+        try {
+           const response = await fetch(asset.uri);
+           const blob = await response.blob();
+           b64 = await new Promise((resolve, reject) => {
+             const reader = new FileReader();
+             reader.onload = () => {
+               const dataUrl = reader.result as string;
+               const base64Data = dataUrl.split(',')[1];
+               resolve(base64Data);
+             };
+             reader.onerror = reject;
+             reader.readAsDataURL(blob);
+           });
+        } catch (e) {
+           // Silently fallback if fetch fails, but let the primary try/catch handle the missing b64
+        }
+      }
 
-      const ext = asset.uri.split('.').pop()?.toLowerCase();
+      if (!b64) {
+        throw new Error('Could not extract image data.');
+      }
+
+      const ext = asset.uri.split('.').pop()?.toLowerCase() || 'jpg';
       const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
       goToPreview(b64, mime, asset.uri);
-    } catch {
-      setErrorMsg('Failed to pick image.');
+    } catch (err: any) {
+      setErrorMsg('Failed to pick image: ' + (err?.message || 'Unknown error'));
       setScreenState(STATES.ERROR);
     }
   };
