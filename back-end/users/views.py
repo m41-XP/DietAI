@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
 from django.conf import settings
+from django.db import transaction
 
 from .serializers import UserSerializer, GoogleAuthSerializer
 from .models import CustomUser
@@ -38,8 +39,9 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
     def perform_create(self, serializer):
-        user = serializer.save()
-        send_verification_email(user)
+        with transaction.atomic():
+            user = serializer.save()
+            send_verification_email(user)
 
     def create(self, request, *args, **kwargs):
         response = super().create(request, *args, **kwargs)
